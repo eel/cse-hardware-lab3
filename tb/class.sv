@@ -15,6 +15,9 @@
 
 `define BAD_FCS 8'd0
 `define GOOD_FCS 8'd1
+	
+`define BAD_DA 8'd0
+`define GOOD_DA 8'd1
 
 class int_constraint;
     // variables (properties)
@@ -99,6 +102,7 @@ class Packet;
     randi fcs_kind; // Used as part of constraining packet type
     randi length_kind;
     randi length;
+	randi da_kind;
     randi da;
     randi sa;
     randi data[]; //Payload using Maximum array,size is generated on the fly
@@ -117,20 +121,26 @@ class Packet;
         this.fcs_kind.cons.set_min_constraint(`BAD_FCS);
         this.fcs_kind.cons.set_max_constraint(`GOOD_FCS);
         this.fcs_kind.cons.constraint_mode_i(`ENABLE);
-        status = status & fcs_kind.randomize_i( );          
+        status = status & this.fcs_kind.randomize_i();          
 
         this.length_kind = new();
         this.length_kind.cons.set_min_constraint(`BAD_LENGTH);
         this.length_kind.cons.set_max_constraint(`GOOD_LENGTH);
         this.length_kind.cons.constraint_mode_i(`ENABLE);            
-        status = status & this.length_kind.randomize_i( );
+        status = status & this.length_kind.randomize_i();
         
         this.length = new();
         this.length.cons.set_min_constraint(8'd254);
         this.length.cons.set_max_constraint(8'd255);
         this.length.cons.constraint_mode_i(`ENABLE);            
-        status = status & this.length.randomize_i( );
-
+        status = status & this.length.randomize_i();
+												   
+        this.da_kind = new();
+        this.da_kind.cons.set_min_constraint(`BAD_DA);
+        this.da_kind.cons.set_max_constraint(`GOOD_DA);
+        this.da_kind.cons.constraint_mode_i(`ENABLE);
+        //status = status & this.da_kind.randomize_i();  
+		
         /*set = new[4];
         set[0] = 8'h00;
         set[1] = 8'h11;
@@ -163,14 +173,14 @@ class Packet;
         fcs.cons.constraint_mode_i(`ENABLE);
     end
     endfunction : new
-
-
+	
 	function bit randomize_o();
 		bit status = `TRUE;
 		integer i = 0;
 		begin
 			status = status & length_kind.randomize_i();
-			status = status & length.randomize_i();
+			status = status & length.randomize_i();	
+			//status = status & da_kind.randomize_i();
 			status = status & da.randomize_i();
 			status = status & sa.randomize_i();
 			this.data = new[this.length.value - 4];
@@ -208,7 +218,8 @@ class Packet;
 		begin
 			$display("+---------------------- PACKET  KIND -------------------------+ ");
 			$display("| fcs_kind     : %s ", this.fcs_kind.value ? "GOOD_FCS" : "BAD_FCS");
-			$display("| length_kind  : %s ", this.length_kind.value ? "GOOD_LENGTH" : "BAD_LENGTH");
+			$display("| length_kind  : %s ", this.length_kind.value ? "GOOD_LENGTH" : "BAD_LENGTH"); 
+			$display("| da_kind      : %s ", this.da_kind.value ? "GOOD_DA" : "BAD_DA");
 			$display("+---------------------- PACKET HEADER ------------------------+ ");
 			$display("| Destination  : %h ", this.da.value); 
 			$display("| Source       : %02x ", this.sa.value);
@@ -325,19 +336,33 @@ class Receiver;
 	// constructor method
 	function new(mailbox #(Packet) _rcvr2sb, bit [01:00] _port_id);
 		if (_rcvr2sb == null) begin
-				$display("%09d[RECEIVER   ]: **ERROR**: rcvr2sb is null", $time);
-				$finish;
+			$display("%09d[RECEIVER   ]: **ERROR**: rcvr2sb is null", $time);
+			$finish;
 		end
 		else begin
-	            this.packets_rcvd = 0;
-				this.rcvr2sb = _rcvr2sb;
-				port_id = _port_id;
+            this.packets_rcvd = 0;
+			this.rcvr2sb = _rcvr2sb;
+			port_id = _port_id;
 		end
 	endfunction : new  
 
 	task start(byte unsigned port_addrs[]);
 		logic [7:0] bytes[];
 		Packet pkt;
+		randi do_stall;
+		randi stall_length;
+		
+		// Random stalls on output (2.2.1)
+		do_stall = new();
+		do_stall.cons.set_min_constraint(`FALSE);
+        do_stall.cons.set_max_constraint(`TRUE);
+        do_stall.cons.constraint_mode_i(`ENABLE);
+		
+		stall_length = new();
+		stall_length.cons.set_min_constraint(`FALSE);
+        stall_length.cons.set_max_constraint(`TRUE);
+        stall_length.cons.constraint_mode_i(`ENABLE);
+		
 		forever begin				
             bytes = new();
             case(port_id)
@@ -450,7 +475,7 @@ class Driver;
 	
 	function new(ref mailbox #(Packet) _drvr2sb, ref Packet _drvr2queue[$]); // constructor method
 		if (_drvr2sb == null) begin
-			$display("%08d[DRIVER    ]: **ERROR**: drvr2sb is null", $time);
+			$display("%09d[DRIVER    ]: **ERROR**: drvr2sb is null", $time);
 			$finish;
 		end
 		else begin
@@ -463,7 +488,7 @@ class Driver;
 
 	// method to send the packet to DUT ////////
 	task start(byte unsigned port_addrs[]);
-	Packet      pkt,pkt2;
+	Packet      pkt/*,pkt2*/;
 	int         length;
 	logic [7:0] bytes[];				   
     begin
@@ -534,7 +559,7 @@ class Environment;
         PacketInQueue = new;
 		rcvr2sb = new;
 		drvr2sb = new;
-		sb = new(drvr2sb,rcvr2sb, PacketInQueue);
+		sb = new(drvr2sb, rcvr2sb, PacketInQueue);
         				
 		drvr = new(drvr2sb, PacketInQueue);
 
@@ -593,12 +618,12 @@ class Environment;
 	    @(posedge $root.mem_intf.clock);
 	    $root.mem_intf.cb.mem_addr  <= 8'h2;
 	    $root.mem_intf.cb.mem_wdata <= this.port_addrs[2];
-        $display("%09d[ENVIRONMENT]: Port 2 Address %h ", $time,this.port_addrs[2]);
+        $display("%09d[ENVIRONMENT]: Port 2 Address %h ", $time, this.port_addrs[2]);
 	
 	    @(posedge $root.mem_intf.clock);
 	    $root.mem_intf.cb.mem_addr  <= 8'h3;
 	    $root.mem_intf.cb.mem_wdata <= this.port_addrs[3];
-        $display("%09d[ENVIRONMENT]: Port 3 Address %h ",$time,this.port_addrs[3]);
+        $display("%09d[ENVIRONMENT]: Port 3 Address %h ",$time, this.port_addrs[3]);
 	
 	    @(posedge $root.mem_intf.clock);
 	    $root.mem_intf.cb.mem_en <=0;
@@ -624,7 +649,7 @@ class Environment;
 
 	task wait_for_end();
         $display("%09d[ENVIRONMENT]: start of wait_for_end() method", $time);
-		repeat(10000) @($root.input_intf.clock);
+		repeat (10000) @($root.input_intf.clock);
         $display("%09d[ENVIRONMENT]: end of wait_for_end() method", $time);
 	endtask : wait_for_end
 
