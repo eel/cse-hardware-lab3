@@ -32,14 +32,14 @@ interface input_interface (input bit clock);
     logic [07:00] data; 
     logic         reset_b; 
  
-  clocking cb@(posedge clock); 
-  default input #1 output #1; 
-     input        data_stall;
-     output       data_valid; 
-     output       data; 
-  endclocking 
-   
-  modport IP(clocking cb, output reset_b, input clock);  
+    clocking cb@(posedge clock); 
+    default input #1 output #1; 
+        input        data_stall;
+        output       data_valid; 
+        output       data; 
+    endclocking 
+    
+    modport IP(clocking cb, output reset_b, input clock);  
 endinterface
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -48,17 +48,17 @@ endinterface
 ///////////////////////////////////////////////////////////////////////////////
 
 interface output_interface (input bit clock); 
-  logic [7:0] data_out; 
-  logic       ready; 
-  logic       read; 
-   
-  clocking cb@(posedge clock); 
-      default input #1 output #1; 
-      input     data_out; 
-      input     ready; 
-      output    read; 
-  endclocking 
-   
-  modport OP(clocking cb, input clock); 
+    logic [7:0] data_out; 
+    logic       ready; 
+    logic       read; 
+    
+    clocking cb@(posedge clock); 
+        default input #1 output #1; 
+        input     data_out; 
+        input     ready; 
+        output    read; 
+    endclocking 
+    
+    modport OP(clocking cb, input clock); 
   
 endinterface

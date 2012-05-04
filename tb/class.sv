@@ -106,7 +106,7 @@ class Packet;
     randi da;
     randi sa;
     randi data[]; //Payload using Maximum array,size is generated on the fly
-    randi fcs;                                     
+    randi fcs;
     int pkt_id;
     static int tot_pkts = 0;
     byte unsigned set[];
@@ -121,20 +121,21 @@ class Packet;
             this.fcs_kind.cons.set_min_constraint(`BAD_FCS);
             this.fcs_kind.cons.set_max_constraint(`GOOD_FCS);
             this.fcs_kind.cons.constraint_mode_i(`ENABLE);
-            status = status & this.fcs_kind.randomize_i();      
+            status = status & this.fcs_kind.randomize_i();
         
             this.length_kind = new();
             this.length_kind.cons.set_min_constraint(`BAD_LENGTH);
             this.length_kind.cons.set_max_constraint(`GOOD_LENGTH);
-            this.length_kind.cons.constraint_mode_i(`ENABLE);        
+            this.length_kind.cons.constraint_mode_i(`ENABLE);
             status = status & this.length_kind.randomize_i();
             
             this.length = new();
             this.length.cons.set_min_constraint(8'd254);
             this.length.cons.set_max_constraint(8'd255);
-            this.length.cons.constraint_mode_i(`ENABLE);        
+            this.length.cons.constraint_mode_i(`ENABLE);
             status = status & this.length.randomize_i();
-                                                           
+            
+            // Randomly create bad packets (2.2.3)
             this.da_kind = new();
             this.da_kind.cons.set_min_constraint(`BAD_DA);
             this.da_kind.cons.set_max_constraint(`GOOD_DA);
@@ -351,30 +352,38 @@ class Receiver;
         Packet pkt;
         randi do_stall;
         randi stall_length;
+        bit status;
         
         // Random stalls on output (2.2.1)
-        do_stall = new();
+        do_stall = new(`DISABLE, `FALSE);
         do_stall.cons.set_min_constraint(`FALSE);
-        do_stall.cons.set_max_constraint(`TRUE);
+        do_stall.cons.set_max_constraint(`FALSE);
         do_stall.cons.constraint_mode_i(`ENABLE);
         
-        stall_length = new();
+        stall_length = new(`DISABLE, 8'd1);
         stall_length.cons.set_min_constraint(`FALSE);
         stall_length.cons.set_max_constraint(`TRUE);
         stall_length.cons.constraint_mode_i(`ENABLE);
         
         forever begin
             bytes = new();
+            status = `TRUE;
             case(port_id)
                 0: begin
                     while (~$root.output_intf[0].ready) @(posedge $root.output_intf[0].clock);
                     $root.output_intf[0].read = 1; 
                     @(posedge $root.output_intf[0].clock);
-                    @(posedge $root.output_intf[0].clock);                      
-                            while ($root.output_intf[0].ready) begin
-                    bytes = new[bytes.size + 1](bytes);
-                    bytes[bytes.size - 1] = $root.output_intf[0].data_out;
                     @(posedge $root.output_intf[0].clock);
+                    while ($root.output_intf[0].ready) begin
+                        //status = do_stall.randomize_i();
+                        if (status & do_stall.value) begin
+                            $display("%09d[RECEIVER   ]: Stalling for %0d cycles...", $time, stall_length.value);
+                            repeat (stall_length.value) @(posedge $root.output_intf[0].clock);
+                        end
+                        
+                        bytes = new[bytes.size + 1](bytes);
+                        bytes[bytes.size - 1] = $root.output_intf[0].data_out;
+                        @(posedge $root.output_intf[0].clock);
                     end 
                     $root.output_intf[0].read = 0;
                 end
@@ -382,8 +391,14 @@ class Receiver;
                     while (~$root.output_intf[1].ready) @(posedge $root.output_intf[1].clock);
                     $root.output_intf[1].read = 1; 
                     @(posedge $root.output_intf[1].clock);
-                    @(posedge $root.output_intf[1].clock);                      
+                    @(posedge $root.output_intf[1].clock);
                     while ($root.output_intf[1].ready) begin
+                        //status = do_stall.randomize_i();
+                        if (status & do_stall.value) begin
+                            $display("%09d[RECEIVER   ]: Stalling for %0d cycles...", $time, stall_length.value);
+                            repeat (stall_length.value) @(posedge $root.output_intf[1].clock);
+                        end
+                        
                         bytes = new[bytes.size + 1](bytes);
                         bytes[bytes.size - 1] = $root.output_intf[1].data_out;
                         @(posedge $root.output_intf[1].clock);
@@ -394,8 +409,14 @@ class Receiver;
                     while (~$root.output_intf[2].ready) @(posedge $root.output_intf[2].clock);
                     $root.output_intf[2].read = 1; 
                     @(posedge $root.output_intf[2].clock);
-                    @(posedge $root.output_intf[2].clock);                      
+                    @(posedge $root.output_intf[2].clock);
                     while ($root.output_intf[2].ready) begin
+                        //status = do_stall.randomize_i();
+                        if (status & do_stall.value) begin
+                            $display("%09d[RECEIVER   ]: Stalling for %0d cycles...", $time, stall_length.value);
+                            repeat (stall_length.value) @(posedge $root.output_intf[2].clock);
+                        end
+                        
                         bytes = new[bytes.size + 1](bytes);
                         bytes[bytes.size - 1] = $root.output_intf[2].data_out;
                         @(posedge $root.output_intf[2].clock);
@@ -406,8 +427,14 @@ class Receiver;
                     while (~$root.output_intf[3].ready) @(posedge $root.output_intf[3].clock);
                     $root.output_intf[3].read = 1; 
                     @(posedge $root.output_intf[3].clock);
-                    @(posedge $root.output_intf[3].clock);                      
+                    @(posedge $root.output_intf[3].clock);
                     while ($root.output_intf[3].ready) begin
+                        //status = do_stall.randomize_i();
+                        if (status & do_stall.value) begin
+                            $display("%09d[RECEIVER   ]: Stalling for %0d cycles...", $time, stall_length.value);
+                            repeat (stall_length.value) @(posedge $root.output_intf[3].clock);
+                        end
+                        
                         bytes = new[bytes.size + 1](bytes);
                         bytes[bytes.size - 1] = $root.output_intf[3].data_out;
                         @(posedge $root.output_intf[3].clock);
@@ -416,24 +443,24 @@ class Receiver;
                 end
             endcase
             // Create a new packet for which to pass to the mailbox
-            pkt = new(port_addrs);              
+            pkt = new(port_addrs);
             $display("%09d[RECEIVER   ]: Received a packet of length %0d", $time, bytes.size);
             pkt.byte_unpack(bytes);
     
-            pkt.display();                          
-            rcvr2sb.put(pkt);                   
+            pkt.display();
+            rcvr2sb.put(pkt);
             $display("%09d[RECEIVER   ]: Put the received packet in the mailbox", $time);
-            bytes.delete();        
-            packets_rcvd++;    
+            bytes.delete();
+            packets_rcvd++;
         end
     endtask : start
 endclass : Receiver
 
 class Scoreboard;
-    Packet        PacketInQueue[$];
-    mailbox #(Packet) drvr2sb;
-    mailbox #(Packet) rcvr2sb;
-    int           packets_comp;
+    Packet              PacketInQueue[$];
+    mailbox #(Packet)   drvr2sb;
+    mailbox #(Packet)   rcvr2sb;
+    int                 packets_comp;
     
     function new (ref mailbox #(Packet) _drvr2sb, ref mailbox #(Packet) _rcvr2sb, ref Packet _drvr2queue[$]); // constructor method
         this.drvr2sb = _drvr2sb;
@@ -443,7 +470,7 @@ class Scoreboard;
 
     task start();
         Packet pkt_rcv, pkt_exp;
-        forever begin            
+        forever begin
             drvr2sb.get(pkt_exp);
             $display("%09d[SCOREBOARD ]: Scoreboard received a packet from driver ", $time);
             $display("%09d[SCOREBOARD ]: The packet sent from driver is as follows ", $time);
@@ -467,10 +494,10 @@ class Scoreboard;
 endclass // scoreboard
 
 class Driver;
-    Packet        PacketInQueue[$];
-    mailbox #(Packet) drvr2sb;
-    //Packet        gpkt;
-    int           packets_sent;
+    Packet              PacketInQueue[$];
+    mailbox #(Packet)   drvr2sb;
+    //Packet              gpkt;
+    int                 packets_sent;
     
     function new(ref mailbox #(Packet) _drvr2sb, ref Packet _drvr2queue[$]); // constructor method
         if (_drvr2sb == null) begin

@@ -2,10 +2,10 @@ program Testcase ( );
 
     Environment env;
 
-    Packet pkt1;
-    Packet pkt2;
+    //Packet pkt1;
+    //Packet pkt2;
 
-    logic [7:0] bytes[ ];    
+    //logic [7:0] bytes[ ];    
     
     initial
         begin

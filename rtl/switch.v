@@ -129,10 +129,10 @@ module async_fifo (reset_b, rclk, wclk, write, read, wdata, rdata, empty, full);
     parameter DEPTH = 32;
     parameter ADDR  =  5;
     
-    input  wire 			reset_b;
-    input  wire 			rclk;
-    input  wire 			wclk;
-    input  wire 			write;
+    input  wire             reset_b;
+    input  wire             rclk;
+    input  wire             wclk;
+    input  wire             write;
     input  wire             read;
     input  wire [WIDTH-1:0] wdata;
     output wire [WIDTH-1:0] rdata;
