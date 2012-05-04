@@ -107,7 +107,7 @@ class Packet;
     static int tot_pkts = 0;
     byte unsigned set[];
 
-    function new();
+    function new(byte unsigned port_addrs[]);
     bit status = `TRUE;
     integer i;
     begin  
@@ -131,12 +131,12 @@ class Packet;
         this.length.cons.constraint_mode_i(`ENABLE);            
         status = status & this.length.randomize_i( );
 
-        set = new[4];
+        /*set = new[4];
         set[0] = 8'h00;
         set[1] = 8'h11;
         set[2] = 8'h22;
-        set[3] = 8'h33;
-        this.da = new(`ENABLE_SET, 8'h00, set);
+        set[3] = 8'h33;*/
+        this.da = new(`ENABLE_SET, port_addrs[0], port_addrs);
         //this.da.cons.set_min_constraint(8'd0);
         //this.da.cons.set_max_constraint(8'd255);
         //this.da.cons.constraint_mode_i(`DISABLE);
@@ -335,7 +335,7 @@ class Receiver;
 		end
 	endfunction : new  
 
-	task start();
+	task start(byte unsigned port_addrs[]);
 		logic [7:0] bytes[];
 		Packet pkt;
 		forever begin				
@@ -391,7 +391,7 @@ class Receiver;
 				 	end
 				endcase
 			// Create a new packet for which to pass to the mailbox
-			pkt = new();				
+			pkt = new(port_addrs);				
 			$display("%09d[RECEIVER   ]: Received a packet of length %0d", $time, bytes.size);
 			pkt.byte_unpack(bytes);
 
@@ -445,7 +445,7 @@ endclass // scoreboard
 class Driver;
     Packet            PacketInQueue[$];
 	mailbox #(Packet) drvr2sb;
-	Packet            gpkt;
+	//Packet            gpkt;
     int               packets_sent;
 	
 	function new(ref mailbox #(Packet) _drvr2sb, ref Packet _drvr2queue[$]); // constructor method
@@ -456,13 +456,13 @@ class Driver;
 		else begin
 			this.drvr2sb = _drvr2sb; // Point our mailbox handle to the global mailbox handle
             this.PacketInQueue = _drvr2queue;
-			this.gpkt = new(); // Initialize the local Packet Object
+			//this.gpkt = new(); // Initialize the local Packet Object
             this.packets_sent = 0;
 		end
 	endfunction : new  
 
 	// method to send the packet to DUT ////////
-	task start();
+	task start(byte unsigned port_addrs[]);
 	Packet      pkt,pkt2;
 	int         length;
 	logic [7:0] bytes[];				   
@@ -471,10 +471,10 @@ class Driver;
 		repeat ($root.num_of_pkts) begin
 			repeat (3) @(posedge $root.input_intf.clock);
 			$display("%09d[DRIVER     ]: Packet number : %0d", $time, this.packets_sent);
-			pkt = new( );
+			pkt = new(port_addrs);
 		
 			// Randomize the packet //
-			if (pkt.randomize_o ( ))  begin
+			if (pkt.randomize_o())  begin
 				$display("%09d[DRIVER     ]: Randomization successful. ", $time);
 				// Pack the packet in tp stream of bytes
 				length = pkt.byte_pack(bytes);
@@ -513,16 +513,12 @@ class Driver;
 endclass : Driver
 
 class Environment;
-    `define P0 8'h00
-    `define P1 8'h11
-    `define P2 8'h22
-    `define P3 8'h33
-
 	Driver drvr;
 	Receiver rcvr[4];
 	Scoreboard sb;
     Packet PacketInQueue[$];
-
+	byte unsigned port_addrs[];
+	
 	mailbox #(Packet) drvr2sb;
 	mailbox #(Packet) rcvr2sb;
     
@@ -572,30 +568,37 @@ class Environment;
 
     task cfg_dut();
         $display("%09d[ENVIRONMENT]: start of cfg_dut() method", $time);
-	
+		
+		// Randomization of port addresses (2.2.2)
+		this.port_addrs = new[4];
+		this.port_addrs[0] = 8'h01;
+		this.port_addrs[1] = 8'h12;
+		this.port_addrs[2] = 8'h23;
+		this.port_addrs[3] = 8'h34;
+		
 	    $root.mem_intf.cb.mem_en <= 1;
 	    @(posedge $root.mem_intf.clock);
 	    $root.mem_intf.cb.mem_rd_wr <= 1;
 	
 	    @(posedge $root.mem_intf.clock);
     	$root.mem_intf.cb.mem_addr  <= 8'h0;
-	    $root.mem_intf.cb.mem_wdata <= `P0;
-        $display("%09d[ENVIRONMENT]: Port 0 Address %h ", $time, `P0);
+	    $root.mem_intf.cb.mem_wdata <= this.port_addrs[0];
+        $display("%09d[ENVIRONMENT]: Port 0 Address %h ", $time, this.port_addrs[0]);
 	
 	    @(posedge $root.mem_intf.clock);
 	    $root.mem_intf.cb.mem_addr  <= 8'h1;
-	    $root.mem_intf.cb.mem_wdata <= `P1;
-        $display("%09d[ENVIRONMENT]: Port 1 Address %h ", $time, `P1);
+	    $root.mem_intf.cb.mem_wdata <= this.port_addrs[1];
+        $display("%09d[ENVIRONMENT]: Port 1 Address %h ", $time, this.port_addrs[1]);
 	
 	    @(posedge $root.mem_intf.clock);
 	    $root.mem_intf.cb.mem_addr  <= 8'h2;
-	    $root.mem_intf.cb.mem_wdata <= `P2;
-        $display("%09d[ENVIRONMENT]: Port 2 Address %h ", $time,`P2);
+	    $root.mem_intf.cb.mem_wdata <= this.port_addrs[2];
+        $display("%09d[ENVIRONMENT]: Port 2 Address %h ", $time,this.port_addrs[2]);
 	
 	    @(posedge $root.mem_intf.clock);
 	    $root.mem_intf.cb.mem_addr  <= 8'h3;
-	    $root.mem_intf.cb.mem_wdata <= `P3;
-        $display("%09d[ENVIRONMENT]: Port 3 Address %h ",$time,`P3);
+	    $root.mem_intf.cb.mem_wdata <= this.port_addrs[3];
+        $display("%09d[ENVIRONMENT]: Port 3 Address %h ",$time,this.port_addrs[3]);
 	
 	    @(posedge $root.mem_intf.clock);
 	    $root.mem_intf.cb.mem_en <=0;
@@ -610,11 +613,11 @@ class Environment;
         $display("%09d[ENVIRONMENT]:  start of start() method", $time);
 		fork
 			sb.start();
-			drvr.start();
-			rcvr[0].start();
-			rcvr[1].start();
-			rcvr[2].start();
-			rcvr[3].start();
+			drvr.start(this.port_addrs);
+			rcvr[0].start(this.port_addrs);
+			rcvr[1].start(this.port_addrs);
+			rcvr[2].start(this.port_addrs);
+			rcvr[3].start(this.port_addrs);
 		join_any
         $display("%09d[ENVIRONMENT]:  End of Receiver  method", $time);
 	endtask : start
