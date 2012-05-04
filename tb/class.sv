@@ -7,7 +7,7 @@
 
 // Randomization Modes
 `define ENABLE_SET      8'd2
-`define ENABLE_SEQ      8'd1
+//`define ENABLE_SEQ      8'd1
 `define DISABLE         8'd0
 
 `define BAD_LENGTH  8'd0
@@ -23,7 +23,7 @@ class int_constraint;
     byte unsigned min;
 
     // functions (methods)
-    function new( );
+    function new();
         constraint_mode_i(`ENABLE);
         set_max_constraint(8'd255);
         set_min_constraint(8'd0);
@@ -47,15 +47,15 @@ class randi;
     byte unsigned mode;
     byte unsigned value;
     int_constraint cons;
-    static byte unsigned empty_set [];
-    byte unsigned set [];
+    static byte unsigned empty_set[];
+    byte unsigned set[];
 
     // methods
     function new (byte unsigned _mode = `ENABLE, byte unsigned _value = 8'h00, byte unsigned _set [] = empty_set);
         this.mode  = _mode;
         this.set   = _set;
         this.value = _value;
-        cons = new ( );
+        cons = new();
     endfunction
 
     function void rand_mode_i(input byte unsigned _mode);
@@ -71,9 +71,9 @@ class randi;
             end
             else begin
                 // set random value
-                for(int i = 0; i < 20; i++) begin
+                for (int i = 0; i < 20; i++) begin
                     this.value = this.cons.min + {$random} % (this.cons.max - this.cons.min + 1);
-                    if((this.value >= this.cons.min) && (this.value <= cons.max)) begin
+                    if ((this.value >= this.cons.min) && (this.value <= cons.max)) begin
                         return `TRUE;
                         break;
                     end
@@ -105,27 +105,27 @@ class Packet;
     randi fcs;									   
     int pkt_id;
     static int tot_pkts = 0;
-    byte unsigned set [];
+    byte unsigned set[];
 
-    function new ( );
+    function new();
     bit status = `TRUE;
     integer i;
     begin  
         pkt_id = tot_pkts++;
 
-        this.fcs_kind = new( );
+        this.fcs_kind = new();
         this.fcs_kind.cons.set_min_constraint(`BAD_FCS);
         this.fcs_kind.cons.set_max_constraint(`GOOD_FCS);
         this.fcs_kind.cons.constraint_mode_i(`ENABLE);
         status = status & fcs_kind.randomize_i( );          
 
-        this.length_kind = new( );
+        this.length_kind = new();
         this.length_kind.cons.set_min_constraint(`BAD_LENGTH);
         this.length_kind.cons.set_max_constraint(`GOOD_LENGTH);
         this.length_kind.cons.constraint_mode_i(`ENABLE);            
         status = status & this.length_kind.randomize_i( );
         
-        this.length = new( );
+        this.length = new();
         this.length.cons.set_min_constraint(8'd254);
         this.length.cons.set_max_constraint(8'd255);
         this.length.cons.constraint_mode_i(`ENABLE);            
@@ -137,27 +137,27 @@ class Packet;
         set[2] = 8'h22;
         set[3] = 8'h33;
         this.da = new(`ENABLE_SET, 8'h00, set);
-        this.da.cons.set_min_constraint(8'd0);
-        this.da.cons.set_max_constraint(8'd255);
-        this.da.cons.constraint_mode_i(`DISABLE);
-        status = status & this.da.randomize_i( );
+        //this.da.cons.set_min_constraint(8'd0);
+        //this.da.cons.set_max_constraint(8'd255);
+        //this.da.cons.constraint_mode_i(`DISABLE);
+        status = status & this.da.randomize_i();
 
-        this.sa = new( );
+        this.sa = new();
         this.sa.cons.set_min_constraint(8'd0);
         this.sa.cons.set_max_constraint(8'd255);
         this.sa.cons.constraint_mode_i(`ENABLE);            
-        status = status & this.sa.randomize_i( );
+        status = status & this.sa.randomize_i();
 
         this.data = new[this.length.value];
-        for(i = 0; i < this.length.value ; i++) begin
-            this.data[i] = new( );
+        for(i = 0; i < this.length.value; i++) begin
+            this.data[i] = new();
             this.data[i].cons.set_min_constraint(8'd0);
             this.data[i].cons.set_max_constraint(8'd255);
             this.data[i].cons.constraint_mode_i(`ENABLE);            
             status = status & this.data[i].randomize_i( ); 
         end
 
-        fcs = new( );
+        fcs = new();
         fcs.cons.set_min_constraint(8'd0);
         fcs.cons.set_max_constraint(8'd255);
         fcs.cons.constraint_mode_i(`ENABLE);
@@ -165,26 +165,26 @@ class Packet;
     endfunction : new
 
 
-	function bit randomize_o ( );
+	function bit randomize_o();
 		bit status = `TRUE;
 		integer i = 0;
 		begin
-			status = status & length_kind.randomize_i ( );
-			status = status & length.randomize_i ( );
-			status = status & da.randomize_i ( );
-			status = status & sa.randomize_i ( );
+			status = status & length_kind.randomize_i();
+			status = status & length.randomize_i();
+			status = status & da.randomize_i();
+			status = status & sa.randomize_i();
 			this.data = new[this.length.value - 4];
 			foreach (this.data[i]) begin
 				this.data[i] = new ( );
-				status = status & this.data[i].randomize_i( );
+				status = status & this.data[i].randomize_i();
 			end
-			status = status & fcs_kind.randomize_i ( );
+			status = status & fcs_kind.randomize_i();
 			return status;
 		end
 	endfunction : randomize_o;
 
 	/* method to calculate the fcs */
-	function byte cal_fcs ( );
+	function byte cal_fcs();
 		byte unsigned result;
 		begin
 			result = 0;
@@ -203,7 +203,7 @@ class Packet;
 	endfunction : cal_fcs
 
 	/* method to print the packet fields */
-	function void display ( );
+	function void display();
         int line_wrap_cnt = 0;
 		begin
 			$display("+---------------------- PACKET  KIND -------------------------+ ");
@@ -215,7 +215,7 @@ class Packet;
 			$display("| Length       : %02x ", this.length.value);
             $display("+---------------------- PACKET DATA --------------------------+ ");
             $display("        +0  +1  +2  +3  +4  +5  +6  +7  +8  +9  +A  +B  +C  +D  +E  +F");
-			foreach(data[i]) begin    
+			foreach (data[i]) begin    
                 if (line_wrap_cnt == 0) begin
                     $write("[0x%02x0]", i / 16);
                     $write(" %02x ", this.data[i].value[07:00]);
@@ -244,11 +244,11 @@ class Packet;
 			bytes[0] = this.da.value;
 			bytes[1] = this.sa.value;
 			bytes[2] = this.length.value;
-			foreach(this.data[i])
+			foreach (this.data[i])
 				bytes[3 + i] = this.data[i].value;
 			end
 			bytes[this.data.size + 3] = this.cal_fcs( );
-			$display("FCS Packed Value: 0x%02x", bytes[this.data.size + 3]);
+			$display("FCS packed value: 0x%02x", bytes[this.data.size + 3]);
 			
 			// this.fcs.value = bytes[this.data.size + 3];
             byte_pack = bytes.size + 4;
@@ -262,7 +262,7 @@ class Packet;
 			this.sa.value = bytes[1];
 			this.length.value = bytes[2];
 			this.data = new[bytes.size - 4];
-			foreach(this.data[i]) begin
+			foreach (this.data[i]) begin
 				this.data[i] = new ( );
 				this.data[i].value = bytes[i + 3];
 			end
@@ -271,9 +271,9 @@ class Packet;
 			// we do a comparison on the FCS field we received against 
 			// the calculated one we do in  the comparison below.
 			this.fcs.value = bytes[bytes.size - 1];
-		if(this.fcs.value != this.cal_fcs()) 
-			$display("Error: Packed FCS 0x%02x doesn't match UnPacked FCS 0x%02x", this.fcs.value, this.cal_fcs());
-			this.fcs.value = `BAD_FCS;
+			if (this.fcs.value != this.cal_fcs()) 
+				$display("Error: Packed FCS 0x%02x doesn't match unpacked FCS 0x%02x", this.fcs.value, this.cal_fcs());
+			this.fcs.value = `BAD_FCS; // Should this be within the if statement above?
 		end
 	endfunction : byte_unpack
 
@@ -281,34 +281,34 @@ class Packet;
 	function bit compare(Packet pkt);
 		begin
 			compare = 1;
-			if(pkt == null) begin
+			if (pkt == null) begin
 				$display(" ** ERROR ** : pkt : received a null object ");
 				compare = 0;
 			end
 			else begin
-				if(pkt.da.value !== this.da.value) begin
+				if (pkt.da.value !== this.da.value) begin
 					$display (" ** ERROR DA**: pkt : Pkt : 0x%02h, this : 0x%02h", pkt.da.value, this.da.value);
 					compare = 0;
 				end
-				if(pkt.sa.value !== this.sa.value) begin
+				if (pkt.sa.value !== this.sa.value) begin
 					$display (" ** ERROR SA **: pkt : Pkt : 0x%02h, this : 0x%02h", pkt.sa.value, this.sa.value);
 					compare = 0;
 				end
-				if(pkt.length.value !== this.length.value) begin
+				if (pkt.length.value !== this.length.value) begin
 					$display (" ** ERROR Length**: pkt : Pkt : 0x%02x, this : 0x%02x", pkt.length.value, this.length.value);
 					compare = 0;
 				end
-				if(pkt.data.size !== this.data.size) begin
+				if (pkt.data.size !== this.data.size) begin
 					$display (" ** ERROR **: pkt : data.size : %02d, this : data.size	: %02d, these do not match", pkt.data.size, this.data.size);
 					compare = 0;
 				end
-				foreach(this.data[i])
-					if(pkt.data[i].value !== this.data[i].value) begin
+				foreach (this.data[i])
+					if (pkt.data[i].value !== this.data[i].value) begin
 						$display (" ** ERROR **: Packet:[0x%02x] 0x%02x != 0x%02x", i, pkt.data[i].value, this.data[i].value);
 						compare = 0;
 					end
-				if(pkt.fcs.value !== this.fcs.value) begin
-                    $display(" ** ERROR **: pkt : fcs field did not match 0x%02h 0x%02h", pkt.fcs.value ,this.fcs.value);
+				if (pkt.fcs.value !== this.fcs.value) begin
+                    $display(" ** ERROR **: pkt : fcs field did not match 0x%02h 0x%02h", pkt.fcs.value, this.fcs.value);
 	 			    compare = 0;
 	 			end
 			end
@@ -324,16 +324,14 @@ class Receiver;
     
 	// constructor method
 	function new(mailbox #(Packet) _rcvr2sb, bit [01:00] _port_id);
-	if(_rcvr2sb == null)
-		begin
-			$display("%09d[RECEIVER   ]: **ERROR**: rcvr2sb is null", $time);
-			$finish;
+		if (_rcvr2sb == null) begin
+				$display("%09d[RECEIVER   ]: **ERROR**: rcvr2sb is null", $time);
+				$finish;
 		end
-	else
-		begin
-            this.packets_rcvd = 0;
-			this.rcvr2sb = _rcvr2sb;
-			port_id = _port_id;
+		else begin
+	            this.packets_rcvd = 0;
+				this.rcvr2sb = _rcvr2sb;
+				port_id = _port_id;
 		end
 	endfunction : new  
 
@@ -344,7 +342,7 @@ class Receiver;
             bytes = new();
             case(port_id)
                 0: begin
-                    while(~$root.output_intf[0].ready) @(posedge $root.output_intf[0].clock);
+                    while (~$root.output_intf[0].ready) @(posedge $root.output_intf[0].clock);
                     $root.output_intf[0].read = 1; 
                     @(posedge $root.output_intf[0].clock);
                     @(posedge $root.output_intf[0].clock);						
@@ -356,7 +354,7 @@ class Receiver;
                     $root.output_intf[0].read = 0;
                 end
                 1: begin
-						while(~$root.output_intf[1].ready) @(posedge $root.output_intf[1].clock);
+						while (~$root.output_intf[1].ready) @(posedge $root.output_intf[1].clock);
 						$root.output_intf[1].read = 1; 
 						@(posedge $root.output_intf[1].clock);
 						@(posedge $root.output_intf[1].clock);						
@@ -368,7 +366,7 @@ class Receiver;
 						$root.output_intf[1].read = 0;
 				 	end
 					2: begin
-						while(~$root.output_intf[2].ready) @(posedge $root.output_intf[2].clock);
+						while (~$root.output_intf[2].ready) @(posedge $root.output_intf[2].clock);
 						$root.output_intf[2].read = 1; 
 						@(posedge $root.output_intf[2].clock);
 						@(posedge $root.output_intf[2].clock);						
@@ -380,7 +378,7 @@ class Receiver;
 						$root.output_intf[2].read = 0;
 				 	end
 					3: begin
-						while(~$root.output_intf[3].ready) @(posedge $root.output_intf[3].clock);
+						while (~$root.output_intf[3].ready) @(posedge $root.output_intf[3].clock);
 						$root.output_intf[3].read = 1; 
 						@(posedge $root.output_intf[3].clock);
 						@(posedge $root.output_intf[3].clock);						
@@ -393,7 +391,7 @@ class Receiver;
 				 	end
 				endcase
 			// Create a new packet for which to pass to the mailbox
-			pkt = new ( );				
+			pkt = new();				
 			$display("%09d[RECEIVER   ]: Received a packet of length %0d", $time, bytes.size);
 			pkt.byte_unpack(bytes);
 
@@ -403,8 +401,7 @@ class Receiver;
 			bytes.delete();            
             packets_rcvd++;    
 		end
-        
-endtask : start
+	endtask : start
 
 endclass : Receiver
 
@@ -420,24 +417,24 @@ class Scoreboard;
         this.PacketInQueue = _drvr2queue;
 	endfunction : new
 
-	task start ( );
+	task start();
 		Packet pkt_rcv, pkt_exp;
 		forever begin                
 			drvr2sb.get(pkt_exp);
-			$display("%09d[SOREBOARD  ]: Scoreboard received a packet from driver ", $time);
-			$display("%09d[SOREBOARD  ]: The packet sent from driver is as follows ", $time);
-			pkt_exp.display( );
+			$display("%09d[SCOREBOARD ]: Scoreboard received a packet from driver ", $time);
+			$display("%09d[SCOREBOARD ]: The packet sent from driver is as follows ", $time);
+			pkt_exp.display();
 				
-		    rcvr2sb.get (pkt_rcv);
-			$display("%09d[SOREBOARD  ]: Scoreboard received a packet from receiver ", $time);
-            $display("%09d[SOREBOARD  ]: The captured packet from the Receiver is as follows ", $time);
-			pkt_rcv.display ( );												
+		    rcvr2sb.get(pkt_rcv);
+			$display("%09d[SCOREBOARD ]: Scoreboard received a packet from receiver ", $time);
+            $display("%09d[SCOREBOARD ]: The captured packet from receiver is as follows ", $time);
+			pkt_rcv.display ();												
 				
 			if (pkt_rcv.compare(pkt_exp) == 1) begin
-				$display("%09d[SOREBOARD  ]: Packet matched ",$time);
+				$display("%09d[SCOREBOARD ]: Packet matched ",$time);
 			end
 			else begin
-				$display("%09d[SOREBOARD  ]: Packet did NOT match ",$time);
+				$display("%09d[SCOREBOARD ]: Packet did NOT match ",$time);
 				$root.error++;
 			end	
 			packets_comp++;
@@ -452,7 +449,7 @@ class Driver;
     int               packets_sent;
 	
 	function new(ref mailbox #(Packet) _drvr2sb, ref Packet _drvr2queue[$]); // constructor method
-		if(_drvr2sb == null) begin
+		if (_drvr2sb == null) begin
 			$display("%08d[DRIVER    ]: **ERROR**: drvr2sb is null", $time);
 			$finish;
 		end
@@ -468,17 +465,17 @@ class Driver;
 	task start();
 	Packet      pkt,pkt2;
 	int         length;
-	logic [7:0] bytes [ ];				   
+	logic [7:0] bytes[];				   
     begin
-		$display("%08d[DRIVER     ]: Number of packets : %0d", $root.num_of_pkts, $time);
-		repeat($root.num_of_pkts) begin
-			repeat(3) @(posedge $root.input_intf.clock);
-			$display("%08d[DRIVER     ]: Packet number : %0d", this.packets_sent, $time);
+		$display("%09d[DRIVER     ]: Number of packets : %0d", $time, $root.num_of_pkts);
+		repeat ($root.num_of_pkts) begin
+			repeat (3) @(posedge $root.input_intf.clock);
+			$display("%09d[DRIVER     ]: Packet number : %0d", $time, this.packets_sent);
 			pkt = new( );
 		
 			// Randomize the packet //
 			if (pkt.randomize_o ( ))  begin
-				$display("%09d[DRIVER     ]: Randomization Successfull. ", $time);
+				$display("%09d[DRIVER     ]: Randomization successful. ", $time);
 				// Pack the packet in tp stream of bytes
 				length = pkt.byte_pack(bytes);
 					
@@ -496,19 +493,19 @@ class Driver;
 				
 				$display("%09d[DRIVER     ]: Put the sent packet in the mailbox", $time);
 				drvr2sb.put(pkt); // Push the packet in to mailbox for scoreboard
-				$display("%09d[DRIVER     ]: Finished Driving the packet with length %0d", $time, length); 
+				$display("%09d[DRIVER     ]: Finished driving the packet with length %0d", $time, length); 
 				pkt.display();
-				$display("%09d[DRIVER     ]: The above is the packet that was put into Mailbox", $time);
+				$display("%09d[DRIVER     ]: The above is the packet that was put into the mailbox", $time);
 				this.packets_sent++;
 				
 				// We need to keep each packet at least two clock cycles apart.
-				repeat(3)@(posedge $root.input_intf.clock);
+				repeat(3) @(posedge $root.input_intf.clock);
 			end
 			else begin
 				$display("%09d[DRIVER   ]:  ** Randomization failed. **",$time);
 				// Increment the error count in randomization fails ////////
 				$root.error++;
-				$finish();
+				$finish;
 			end
 		end // end repeat
     end	// end function start
@@ -516,7 +513,6 @@ class Driver;
 endclass : Driver
 
 class Environment;
-
     `define P0 8'h00
     `define P1 8'h11
     `define P2 8'h22
@@ -530,31 +526,29 @@ class Environment;
 	mailbox #(Packet) drvr2sb;
 	mailbox #(Packet) rcvr2sb;
     
-	function new( );
+	function new();
 		begin
 		    $display("%09d[ENVIRONMENT]: created env object", $time);
 		end
 	endfunction : new
 
-	function void build ( );
+	function void build();
 		$display("%09d[ENVIRONMENT]: start of build() method", $time);
         
         PacketInQueue = new;
 		rcvr2sb = new;
 		drvr2sb = new;
 		sb = new(drvr2sb,rcvr2sb, PacketInQueue);
-        
-
+        				
 		drvr = new(drvr2sb, PacketInQueue);
 
-		foreach(rcvr[i]) 
+		foreach (rcvr[i]) 
 			rcvr[i]= new(rcvr2sb, i[01:00]);
-
-
+		
 		$display("%09d[ENVIRONMENT]: end of build() method", $time);
 	endfunction : build
 
-    task reset ( );
+    task reset();
 		$display("%09d[ENVIRONMENT]: start of reset() method", $time);
 	    // Drive all DUT inputs to a known state
 	    $root.mem_intf.cb.mem_wdata <= 0;
@@ -621,27 +615,27 @@ class Environment;
 			rcvr[1].start();
 			rcvr[2].start();
 			rcvr[3].start();
-			join_any
-            $display("%09d[ENVIRONMENT]:  End of Receiver  method", $time);
+		join_any
+        $display("%09d[ENVIRONMENT]:  End of Receiver  method", $time);
 	endtask : start
 
-	task wait_for_end ();
+	task wait_for_end();
         $display("%09d[ENVIRONMENT]: start of wait_for_end() method", $time);
 		repeat(10000) @($root.input_intf.clock);
         $display("%09d[ENVIRONMENT]: end of wait_for_end() method", $time);
 	endtask : wait_for_end
 
-	task run ( );
+	task run();
     int packet_in_cnt = 0;
     int packet_out_cnt = 0; 
     int packet_cmp_cnt = 0;
     begin
 		$display("%09d[ENVIRONMENT]: start of run() method", $time);
-		build ( );
-		reset ( );
-		cfg_dut ( );
-		start ( );
-		wait_for_end ( );
+		build();
+		reset();
+		cfg_dut();
+		start();
+		wait_for_end();
         // We need to check whether or not any packets have been captured
         packet_in_cnt = drvr.packets_sent;
         packet_out_cnt = rcvr[0].packets_rcvd + rcvr[1].packets_rcvd + rcvr[2].packets_rcvd + rcvr[3].packets_rcvd;
@@ -655,12 +649,12 @@ class Environment;
             $root.error = 1;
 		    $display("%09d[ENVIRONMENT]: ERROR: The number of packets driven into the scoreboard did not match the number of packets compared by the scoreboard", $time());
         end
-		report ( );
+		report();
 		$display("%09d[ENVIRONMENT]: end of run() method", $time);
         end
 	endtask : run
 
-	task report ( );
+	task report();
 		$display("\n*************************************************");
 		if( 0 == $root.error) $display("********            TEST PASSED         *********");
 		else                  $display("********    TEST Failed with %03d errors *********", $root.error);
