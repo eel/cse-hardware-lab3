@@ -54,7 +54,7 @@ class randi;
     byte unsigned set[];
 
     // methods
-    function new (byte unsigned _mode = `ENABLE, byte unsigned _value = 8'h00, byte unsigned _set [] = empty_set);
+    function new (byte unsigned _mode = `ENABLE, byte unsigned _value = 8'h00, byte unsigned _set[] = empty_set);
         this.mode  = _mode;
         this.set   = _set;
         this.value = _value;
@@ -328,6 +328,38 @@ class Packet;
     endfunction : compare
 
 endclass : Packet
+
+// DUT Predictor (2.2.4)
+class Predictor;
+    byte unsigned port_addrs[];
+
+    function new(byte unsigned _port_addrs[]);
+        this.port_addrs = _port_addrs;
+    endfunction : new
+
+    function int unsigned keep(Packet pkt);
+        if (pkt.data[0] == port_addrs[0]
+            || pkt.data[0] == port_addrs[1]
+            || pkt.data[0] == port_addrs[2]
+            || pkt.data[0] == port_addrs[3])
+            return `TRUE;
+        else
+            return `FALSE;
+    endfunction : keep
+
+    function int unsigned route(Packet pkt);
+        if (pkt.data[0] == port_addrs[0])
+            return 8'd0;
+        else if (pkt.data[0] == port_addrs[1])
+            return 8'd1;
+        else if (pkt.data[0] == port_addrs[2])
+            return 8'd2;
+        else if (pkt.data[0] == port_addrs[3])
+            return 8'd3;
+        else
+            return 8'hFF;
+    endfunction : route
+endclass : Predictor
 
 class Receiver;
     mailbox #(Packet) rcvr2sb;
@@ -630,14 +662,42 @@ class Environment;
     endtask : reset
 
     task cfg_dut();
+        randi p0, p1, p2, p3;
+        bit status = `TRUE;
+        
         $display("%09d[ENVIRONMENT]: start of cfg_dut() method", $time);
         
         // Randomization of port addresses (2.2.2)
         this.port_addrs = new[4];
-        this.port_addrs[0] = 8'h01;
-        this.port_addrs[1] = 8'h12;
-        this.port_addrs[2] = 8'h23;
-        this.port_addrs[3] = 8'h34;
+        
+        p0 = new(`DISABLE, 8'h01);
+        p0.cons.set_min_constraint(8'd0);
+        p0.cons.set_max_constraint(8'd255);
+        p0.cons.constraint_mode_i(`ENABLE);
+        //status = status & p0.randomize_i();
+        
+        p1 = new(`DISABLE, 8'h12);
+        p1.cons.set_min_constraint(8'd0);
+        p1.cons.set_max_constraint(8'd255);
+        p1.cons.constraint_mode_i(`ENABLE);
+        //status = status & p1.randomize_i();
+        
+        p2 = new(`DISABLE, 8'h23);
+        p2.cons.set_min_constraint(8'd0);
+        p2.cons.set_max_constraint(8'd255);
+        p2.cons.constraint_mode_i(`ENABLE);
+        //status = status & p2.randomize_i();
+        
+        p3 = new(`DISABLE, 8'h34);
+        p3.cons.set_min_constraint(8'd0);
+        p3.cons.set_max_constraint(8'd255);
+        p3.cons.constraint_mode_i(`ENABLE);
+        //status = status & p3.randomize_i();
+        
+        this.port_addrs[0] = p0.value;
+        this.port_addrs[1] = p1.value;
+        this.port_addrs[2] = p2.value;
+        this.port_addrs[3] = p3.value;
         
         $root.mem_intf.cb.mem_en <= 1;
         @(posedge $root.mem_intf.clock);
@@ -722,8 +782,8 @@ class Environment;
 
     task report();
         $display("\n*************************************************");
-        if( 0 == $root.error) $display("********        TEST PASSED     *********");
-        else              $display("********    TEST Failed with %03d errors *********", $root.error);
+        if( 0 == $root.error)   $display("********        TEST PASSED     *********");
+        else                    $display("********    TEST Failed with %03d errors *********", $root.error);
         $display("*************************************************\n");
     endtask : report 
 
