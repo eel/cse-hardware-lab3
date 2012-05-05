@@ -416,7 +416,7 @@ module packet_router (
                 else                          next_state = IDLE;
             PROCESS_PACKET:
                 if (data_valid & ~data_stall) next_state = PROCESS_PACKET;
-                else if (~data_valid)         next_state = IDLE;
+                else if (~data_valid | data_stall)         next_state = IDLE;
                 else                          next_state = PROCESS_PACKET;
         endcase
     

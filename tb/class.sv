@@ -360,7 +360,7 @@ class Receiver;
         do_stall.cons.set_max_constraint(`FALSE);
         do_stall.cons.constraint_mode_i(`ENABLE);
         
-        stall_length = new(`DISABLE, 8'd1);
+        stall_length = new(`ENABLE, 8'd1);
         stall_length.cons.set_min_constraint(`FALSE);
         stall_length.cons.set_max_constraint(`TRUE);
         stall_length.cons.constraint_mode_i(`ENABLE);
@@ -375,10 +375,13 @@ class Receiver;
                     @(posedge $root.output_intf[0].clock);
                     @(posedge $root.output_intf[0].clock);
                     while ($root.output_intf[0].ready) begin
-                        //status = do_stall.randomize_i();
+                        status = do_stall.randomize_i();
                         if (status & do_stall.value) begin
+                            status = stall_length.randomize_i();
                             $display("%09d[RECEIVER   ]: Stalling for %0d cycles...", $time, stall_length.value);
+                            $root.output_intf[0].read = 0;
                             repeat (stall_length.value) @(posedge $root.output_intf[0].clock);
+                            $root.output_intf[0].read = 1;
                         end
                         
                         bytes = new[bytes.size + 1](bytes);
@@ -393,10 +396,13 @@ class Receiver;
                     @(posedge $root.output_intf[1].clock);
                     @(posedge $root.output_intf[1].clock);
                     while ($root.output_intf[1].ready) begin
-                        //status = do_stall.randomize_i();
+                        status = do_stall.randomize_i();
                         if (status & do_stall.value) begin
+                            status = stall_length.randomize_i();
                             $display("%09d[RECEIVER   ]: Stalling for %0d cycles...", $time, stall_length.value);
+                            $root.output_intf[1].read = 0;
                             repeat (stall_length.value) @(posedge $root.output_intf[1].clock);
+                            $root.output_intf[1].read = 1;
                         end
                         
                         bytes = new[bytes.size + 1](bytes);
@@ -411,10 +417,13 @@ class Receiver;
                     @(posedge $root.output_intf[2].clock);
                     @(posedge $root.output_intf[2].clock);
                     while ($root.output_intf[2].ready) begin
-                        //status = do_stall.randomize_i();
+                        status = do_stall.randomize_i();
                         if (status & do_stall.value) begin
+                            status = stall_length.randomize_i();
                             $display("%09d[RECEIVER   ]: Stalling for %0d cycles...", $time, stall_length.value);
+                            $root.output_intf[2].read = 0;
                             repeat (stall_length.value) @(posedge $root.output_intf[2].clock);
+                            $root.output_intf[2].read = 1;
                         end
                         
                         bytes = new[bytes.size + 1](bytes);
@@ -429,10 +438,13 @@ class Receiver;
                     @(posedge $root.output_intf[3].clock);
                     @(posedge $root.output_intf[3].clock);
                     while ($root.output_intf[3].ready) begin
-                        //status = do_stall.randomize_i();
+                        status = do_stall.randomize_i();
                         if (status & do_stall.value) begin
+                            status = stall_length.randomize_i();
                             $display("%09d[RECEIVER   ]: Stalling for %0d cycles...", $time, stall_length.value);
+                            $root.output_intf[3].read = 0;
                             repeat (stall_length.value) @(posedge $root.output_intf[3].clock);
+                            $root.output_intf[3].read = 1;
                         end
                         
                         bytes = new[bytes.size + 1](bytes);
