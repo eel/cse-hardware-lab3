@@ -338,7 +338,6 @@ class Predictor;
     endfunction : new
 
     function int unsigned keep(Packet pkt);
-        $display("Packet DA!? %0d", pkt.da.value);
         if (pkt.da.value == port_addrs[0]
             || pkt.da.value == port_addrs[1]
             || pkt.da.value == port_addrs[2]
