@@ -338,23 +338,24 @@ class Predictor;
     endfunction : new
 
     function int unsigned keep(Packet pkt);
-        if (pkt.data[0] == port_addrs[0]
-            || pkt.data[0] == port_addrs[1]
-            || pkt.data[0] == port_addrs[2]
-            || pkt.data[0] == port_addrs[3])
+        $display("Packet DA!? %0d", pkt.da.value);
+        if (pkt.da.value == port_addrs[0]
+            || pkt.da.value == port_addrs[1]
+            || pkt.da.value == port_addrs[2]
+            || pkt.da.value == port_addrs[3])
             return `TRUE;
         else
             return `FALSE;
     endfunction : keep
 
     function int unsigned route(Packet pkt);
-        if (pkt.data[0] == port_addrs[0])
+        if (pkt.da.value == port_addrs[0])
             return 8'd0;
-        else if (pkt.data[0] == port_addrs[1])
+        else if (pkt.da.value == port_addrs[1])
             return 8'd1;
-        else if (pkt.data[0] == port_addrs[2])
+        else if (pkt.da.value == port_addrs[2])
             return 8'd2;
-        else if (pkt.data[0] == port_addrs[3])
+        else if (pkt.da.value == port_addrs[3])
             return 8'd3;
         else
             return 8'hFF;
@@ -373,7 +374,7 @@ class Receiver;
             $finish;
         end
         else begin
-        this.packets_rcvd = 0;
+            this.packets_rcvd = 0;
             this.rcvr2sb = _rcvr2sb;
             port_id = _port_id;
         end
@@ -560,9 +561,12 @@ class Driver;
     task start(byte unsigned port_addrs[]);
     Packet      pkt/*,pkt2*/;
     int         length;
-    logic [7:0] bytes[];                   
+    logic [7:0] bytes[];
+    Predictor   predictor;
     begin
         $display("%09d[DRIVER     ]: Number of packets : %0d", $time, $root.num_of_pkts);
+        predictor = new(port_addrs);
+        
         repeat ($root.num_of_pkts) begin
             repeat (3) @(posedge $root.input_intf.clock);
             $display("%09d[DRIVER     ]: Packet number : %0d", $time, this.packets_sent);
@@ -586,8 +590,14 @@ class Driver;
                 $root.input_intf.cb.data_valid <= 0; // deassert the data_status singal
                 $root.input_intf.cb.data <= 0;  
                 
-                $display("%09d[DRIVER     ]: Put the sent packet in the mailbox", $time);
-                drvr2sb.put(pkt); // Push the packet in to mailbox for scoreboard
+                if (predictor.keep(pkt) == `TRUE) begin
+                    $display("%09d[DRIVER     ]: Put the sent packet in the mailbox", $time);
+                    drvr2sb.put(pkt); // Push the packet in to mailbox for scoreboard
+                end
+                else begin
+                    $display("%09d[DRIVER     ]: Dropped the sent packet", $time);
+                end
+                
                 $display("%09d[DRIVER     ]: Finished driving the packet with length %0d", $time, length); 
                 pkt.display();
                 $display("%09d[DRIVER     ]: The above is the packet that was put into the mailbox", $time);
@@ -597,7 +607,7 @@ class Driver;
                 repeat(3) @(posedge $root.input_intf.clock);
             end
             else begin
-                $display("%09d[DRIVER   ]:  ** Randomization failed. **",$time);
+                $display("%09d[DRIVER   ]:  ** Randomization failed. **", $time);
                 // Increment the error count in randomization fails ////////
                 $root.error++;
                 $finish;
@@ -774,6 +784,11 @@ class Environment;
         if (packet_in_cnt != packet_cmp_cnt) begin
             $root.error = 1;
             $display("%09d[ENVIRONMENT]: ERROR: The number of packets driven into the scoreboard did not match the number of packets compared by the scoreboard", $time());
+        end
+        // Examine scoreboard (2.2.6)
+        if (drvr2sb.num() != 0) begin
+            $root.error = 1;
+            $display("%09d[ENVIRONMENT]: ERROR: The driver scoreboard is not empty.", $time());
         end
         report();
         $display("%09d[ENVIRONMENT]: end of run() method", $time);
